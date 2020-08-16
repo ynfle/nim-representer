@@ -154,6 +154,14 @@ proc normalizeImportExport(importStmt: NimNode, map: IdentMap): NimNode =
   else:
     raise newException(ValueError, $importStmt & "is not a valid import or export stmt")
 
+proc normalizeLoop(loopStmt: NimNode, map: var IdentMap): NimNode =
+  loopStmt.expectKind {nnkForStmt, nnkWhileStmt}
+  result = newNimNode loopStmt.kind
+  if loopStmt.kind == nnkForStmt:
+    result.add loopStmt[0..^3].mapIt(it.normalizeDefName(map))
+  result.add loopStmt[^2].normalizeValue(map)
+  result.add loopStmt[^1].normalizeStmtList(map)
+
 proc normalizeStmtList*(code: NimNode, map: var IdentMap): NimNode =
   code.expectKind nnkStmtList
   result = nnkStmtList.newTree
@@ -182,5 +190,7 @@ proc normalizeStmtList*(code: NimNode, map: var IdentMap): NimNode =
       statement.normalizeCond(map)
     of nnkCaseStmt:
       statement.normalizeCase(map)
+    of nnkWhileStmt, nnkForStmt:
+      statement.normalizeLoop(map)
     else:
       statement
